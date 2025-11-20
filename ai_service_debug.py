@@ -167,7 +167,7 @@ class AIServiceDebug:
                 if not d.get('time'):
                     d['time'] = '08:00'
                 if not d.get('end_time'):
-                    d['end_time'] = '22:00'
+                    d['end_time'] = '23:59'
                 print(f"[DEBUG] 明日として補完: {d}")
                 
             # 今日
