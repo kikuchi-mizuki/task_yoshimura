@@ -257,6 +257,19 @@ class AIService:
                 time_obj = datetime.strptime(d.get('time'), "%H:%M")
                 end_time_obj = time_obj + timedelta(hours=1)
                 d['end_time'] = end_time_obj.strftime('%H:%M')
+            # 空き時間確認で時間が指定されていない場合、デフォルトで8:00〜23:59を設定
+            if parsed.get('task_type') == 'availability_check':
+                if not d.get('time') or not d.get('end_time'):
+                    # 終日（00:00〜23:59）の場合はそのまま
+                    if d.get('time') == '00:00' and d.get('end_time') == '23:59':
+                        pass  # 終日の場合はそのまま
+                    else:
+                        # 時間が指定されていない場合は8:00〜23:59をデフォルト設定
+                        if not d.get('time'):
+                            d['time'] = '08:00'
+                        if not d.get('end_time'):
+                            d['end_time'] = '23:59'
+                        print(f"[DEBUG] 時間未指定のためデフォルト設定: {d.get('time')}〜{d.get('end_time')}")
             # title補完
             if not d.get('title') or d['title'] == '':
                 if d.get('description'):

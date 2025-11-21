@@ -191,6 +191,20 @@ class AIServiceDebug:
             elif d.get('time') and not d.get('end_time'):
                 d['end_time'] = '23:59'
                 print(f"[DEBUG] end_time補完: {d}")
+            
+            # 空き時間確認で時間が指定されていない場合、デフォルトで8:00〜23:59を設定
+            if parsed.get('task_type') == 'availability_check':
+                if not d.get('time') or not d.get('end_time'):
+                    # 終日（00:00〜23:59）の場合はそのまま
+                    if d.get('time') == '00:00' and d.get('end_time') == '23:59':
+                        pass  # 終日の場合はそのまま
+                    else:
+                        # 時間が指定されていない場合は8:00〜23:59をデフォルト設定
+                        if not d.get('time'):
+                            d['time'] = '08:00'
+                        if not d.get('end_time'):
+                            d['end_time'] = '23:59'
+                        print(f"[DEBUG] 時間未指定のためデフォルト設定: {d.get('time')}〜{d.get('end_time')}")
                 
             # title補完（空き時間確認の場合はタイトルを生成しない）
             if not d.get('title') or d['title'] == '':

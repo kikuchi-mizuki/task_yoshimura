@@ -668,7 +668,7 @@ class LineBotHandler:
                         # 8:00〜24:00の間で空き時間を返す
                         day_start = "08:00"
                         day_end = "23:59"
-                        # 枠の範囲と8:00〜22:00の重なり部分だけを対象にする
+                        # 枠の範囲と8:00〜24:00の重なり部分だけを対象にする
                         slot_start = max(start_time, day_start)
                         slot_end = min(end_time, day_end)
                         
