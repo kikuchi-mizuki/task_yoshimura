@@ -48,6 +48,8 @@ class AIService:
                 "7. 自然言語の時間表現は必ず具体的な時刻範囲・日付範囲に変換してください。\n"
                 "   例：'18時以降'→'18:00〜23:59'、'終日'→'00:00〜23:59'、'今日'→'現在時刻〜23:59'、'今日から1週間'→'今日〜7日後の23:59'。\n"
                 "   終了時間が指定されていない場合は1時間の予定として認識してください（例：'10時'→'10:00〜11:00'）。\n"
+                "   **重要：時間が明示的に指定されていない場合（例：「明日の空き時間」「来週の空き時間」など）、timeとend_timeは空欄（nullまたは空文字）にしてください。**\n"
+                "   時間が指定されていない場合は、後続処理で8:00〜23:59がデフォルトとして適用されます。\n"
                 "8. 箇条書き（・や-）、改行、スペース、句読点で区切られている場合も、すべての日時・時間帯を抽出してください。\n"
                 "   例：'・7/10 9-10時\n・7/11 9-10時' → 2件の予定として抽出\n"
                 "   例：'7/11 15:00〜16:00 18:00〜19:00' → 2件の予定として抽出\n"
@@ -259,6 +261,22 @@ class AIService:
                 d['end_time'] = end_time_obj.strftime('%H:%M')
             # 空き時間確認で時間が指定されていない場合、デフォルトで8:00〜23:59を設定
             if parsed.get('task_type') == 'availability_check':
+                # 抽出された時間が現在時刻に近い場合（明示的な指定ではないと判断）、デフォルトを適用
+                if d.get('time'):
+                    try:
+                        from datetime import datetime
+                        extracted_time = datetime.strptime(d.get('time'), "%H:%M").time()
+                        current_time = now.time()
+                        # 現在時刻との差を計算（分単位）
+                        time_diff = abs((extracted_time.hour * 60 + extracted_time.minute) - (current_time.hour * 60 + current_time.minute))
+                        # 30分以内の差の場合は、明示的な指定ではないと判断してデフォルトを適用
+                        if time_diff <= 30:
+                            print(f"[DEBUG] 抽出された時間({d.get('time')})が現在時刻({current_time.strftime('%H:%M')})に近いため、デフォルトを適用")
+                            d['time'] = '08:00'
+                            d['end_time'] = '23:59'
+                    except Exception as e:
+                        print(f"[DEBUG] 時間比較エラー: {e}")
+                
                 if not d.get('time') or not d.get('end_time'):
                     # 終日（00:00〜23:59）の場合はそのまま
                     if d.get('time') == '00:00' and d.get('end_time') == '23:59':

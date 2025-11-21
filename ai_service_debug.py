@@ -194,6 +194,22 @@ class AIServiceDebug:
             
             # 空き時間確認で時間が指定されていない場合、デフォルトで8:00〜23:59を設定
             if parsed.get('task_type') == 'availability_check':
+                # 抽出された時間が現在時刻に近い場合（明示的な指定ではないと判断）、デフォルトを適用
+                if d.get('time'):
+                    try:
+                        from datetime import datetime
+                        extracted_time = datetime.strptime(d.get('time'), "%H:%M").time()
+                        current_time = now.time()
+                        # 現在時刻との差を計算（分単位）
+                        time_diff = abs((extracted_time.hour * 60 + extracted_time.minute) - (current_time.hour * 60 + current_time.minute))
+                        # 30分以内の差の場合は、明示的な指定ではないと判断してデフォルトを適用
+                        if time_diff <= 30:
+                            print(f"[DEBUG] 抽出された時間({d.get('time')})が現在時刻({current_time.strftime('%H:%M')})に近いため、デフォルトを適用")
+                            d['time'] = '08:00'
+                            d['end_time'] = '23:59'
+                    except Exception as e:
+                        print(f"[DEBUG] 時間比較エラー: {e}")
+                
                 if not d.get('time') or not d.get('end_time'):
                     # 終日（00:00〜23:59）の場合はそのまま
                     if d.get('time') == '00:00' and d.get('end_time') == '23:59':
