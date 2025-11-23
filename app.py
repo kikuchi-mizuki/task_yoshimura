@@ -650,6 +650,54 @@ def api_debug_users():
     rows = c.fetchall()
     return jsonify({'users': rows})
 
+@app.route('/api/debug_google_account', methods=['POST'])
+def api_debug_google_account():
+    """指定されたLINEユーザーIDのGoogleアカウント情報を取得"""
+    if not ENABLE_DEBUG_ENDPOINTS:
+        return ("Not Found", 404)
+    import os
+    from flask import request, jsonify
+    secret_token = os.environ.get('DAILY_AGENDA_SECRET_TOKEN')
+    req_token = request.headers.get('X-Auth-Token')
+    if not secret_token or req_token != secret_token:
+        return jsonify({'status': 'error', 'message': 'Forbidden'}), 403
+    
+    line_user_id = request.json.get('line_user_id') if request.is_json else request.form.get('line_user_id')
+    if not line_user_id:
+        return jsonify({'status': 'error', 'message': 'line_user_id is required'}), 400
+    
+    try:
+        from calendar_service import GoogleCalendarService
+        calendar_service = GoogleCalendarService()
+        service = calendar_service._get_calendar_service(line_user_id)
+        
+        # primaryカレンダーの情報を取得
+        calendar = service.calendarList().get(calendarId='primary').execute()
+        
+        # メールアドレスを取得（idまたはsummaryから）
+        email = calendar.get('id', '')
+        if '@' not in email:
+            email = calendar.get('summary', '')
+        
+        return jsonify({
+            'status': 'success',
+            'line_user_id': line_user_id,
+            'google_account': {
+                'email': email,
+                'summary': calendar.get('summary', ''),
+                'time_zone': calendar.get('timeZone', ''),
+                'access_role': calendar.get('accessRole', '')
+            }
+        })
+    except Exception as e:
+        logger.error(f"Googleアカウント情報取得エラー: {e}")
+        import traceback
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     logger.info("LINE Calendar Bot を起動しています...")
