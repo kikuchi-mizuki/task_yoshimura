@@ -414,10 +414,28 @@ class GoogleCalendarService:
                 logger.info(f"[DEBUG] 予定{i+1}の時間: {start} 〜 {end}")
                 
                 if 'T' in start:  # dateTime形式
-                    start_ev = datetime.fromisoformat(start.replace('Z', '+00:00'))
-                    end_ev = datetime.fromisoformat(end.replace('Z', '+00:00'))
+                    # ISO形式の文字列をパース（タイムゾーン情報を保持）
+                    if start.endswith('Z'):
+                        start_ev = datetime.fromisoformat(start.replace('Z', '+00:00'))
+                    else:
+                        start_ev = datetime.fromisoformat(start)
                     
-                    logger.info(f"[DEBUG] 予定{i+1}のパース後: {start_ev} 〜 {end_ev}")
+                    if end.endswith('Z'):
+                        end_ev = datetime.fromisoformat(end.replace('Z', '+00:00'))
+                    else:
+                        end_ev = datetime.fromisoformat(end)
+                    
+                    # タイムゾーン情報がない場合はUTCとして扱う
+                    if start_ev.tzinfo is None:
+                        start_ev = pytz.UTC.localize(start_ev)
+                    if end_ev.tzinfo is None:
+                        end_ev = pytz.UTC.localize(end_ev)
+                    
+                    # UTCからJSTに変換
+                    start_ev = start_ev.astimezone(jst)
+                    end_ev = end_ev.astimezone(jst)
+                    
+                    logger.info(f"[DEBUG] 予定{i+1}のパース後（JST）: {start_ev} 〜 {end_ev}")
                     
                     # 枠外の予定は除外
                     if end_ev <= start_dt or start_ev >= end_dt:
@@ -427,7 +445,7 @@ class GoogleCalendarService:
                     busy_start = max(start_ev, start_dt)
                     busy_end = min(end_ev, end_dt)
                     busy_times.append((busy_start, busy_end))
-                    logger.info(f"[DEBUG] 予定{i+1}をbusy_timesに追加: {busy_start} 〜 {busy_end}")
+                    logger.info(f"[DEBUG] 予定{i+1}をbusy_timesに追加（JST）: {busy_start} 〜 {busy_end}")
                     
                 else:  # date型（終日予定）
                     allday_start = jst.localize(datetime.combine(datetime.strptime(start, "%Y-%m-%d"), datetime.min.time()))
